@@ -1,0 +1,187 @@
+@app.post("/")
+async def process_file(file1: UploadFile, file2: UploadFile):
+    try:
+        text1 = await file1.read()
+        text2 = await file2.read()
+
+        text1 = text1.decode('utf-8')
+        text2 = text2.decode('utf-8')
+
+        tfidf_vectorizer = TfidfVectorizer()
+        tfidf_matrix1 = tfidf_vectorizer.fit_transform([text1])
+        tfidf_matrix2 = tfidf_vectorizer.transform([text2])
+        cos_sim = cosine_similarity(tfidf_matrix1, tfidf_matrix2)[0][0]
+
+        fuzz_ratio = fuzz.token_sort_ratio(text1, text2) / 100
+
+        set1 = set(text1.split())
+        set2 = set(text2.split())
+        common_words = list(set1 & set2)
+        jaccard_sim = len(common_words) / len(set1 | set2)
+
+        levenshtein_distance = distance(text1, text2) / 100
+
+        doc1 = nlp(text1)
+        doc2 = nlp(text2)
+        word2vec_sim = doc1.similarity(doc2)
+
+        # CBOW
+        cbow_sim = 0.0
+        doc2 = nlp(text2)
+        for token in doc1:
+            if token.has_vector:
+                cbow_sim += token.similarity(doc2)
+        cbow_sim /= len(doc1)
+
+        # Doc2Vec
+        doc1_vec = nlp(text1).vector
+        doc2_vec = nlp(text2).vector
+        doc2vec_sim = cosine_similarity([doc1_vec], [doc2_vec])[0][0]
+
+        result = {
+            'cosine_similarity_tfidf': round(float(cos_sim), 2),
+            'fuzzy_match_ratio': fuzz_ratio,
+            'jaccard_similarity': round(float(jaccard_sim), 2),
+            'levenshtein_distance': levenshtein_distance,
+            'word2vec_similarity': round(float(word2vec_sim), 2),
+            'cbow_similarity': round(float(cbow_sim), 2),
+            'doc2vec_similarity': round(float(doc2vec_sim), 2),
+            'common_words': common_words
+        }
+        return result
+
+    except Exception as e:
+        print('An exception occurred' + e)
+
+
+@app.post("/vsm")
+async def get_vsm_model(file1: UploadFile, file2: UploadFile, numDocs: int = Form(...), metric: str = Form(...)):
+    try:
+        text1 = await file1.read()
+        text2 = await file2.read()
+
+        text1 = text1.decode('utf-8')
+        text2 = text2.decode('utf-8')
+
+        preprocessed_text1 = " ".join(preprocess_text(text1))
+        preprocessed_text2 = " ".join(preprocess_text(text2))
+        json_path = 'C:\\Users\\shrir\\OneDrive\\Documents\\Repositories\\Plagirirsm_Detection\\server\\src\\data\\modified_mises_articles.json'
+        descriptions = get_descriptions(json_path)
+
+        if metric == "cosine":
+
+            texts = descriptions
+            all_texts = texts + [preprocessed_text1, preprocessed_text2]
+            print(all_texts)
+            vectorizer = TfidfVectorizer()
+            vectorizer.fit(all_texts)
+            tf_idf_matrix = vectorizer.transform(texts)
+            tfidf_vector1 = vectorizer.transform([preprocessed_text1])
+            tfidf_vector2 = vectorizer.transform([preprocessed_text2])
+            cos_sim_1 = cosine_similarity(tf_idf_matrix, tfidf_vector1)
+            cos_sim_2 = cosine_similarity(tf_idf_matrix, tfidf_vector2)
+            articles1 = get_top_k_articles_cos_sim(cos_sim_1, numDocs)
+            articles2 = get_top_k_articles_cos_sim(cos_sim_2, numDocs)
+
+            filenames = [file1.filename, file2.filename]
+            return {"articles1": articles1, "articles2": articles2}
+
+        elif metric == "jaccard":
+            descriptions_new = []
+            for description in descriptions:
+                descriptions_new.append(description.split(" "))
+
+            jaccard_similarity_text1, jaccard_similarity_text2 = get_jaccard_similarity(descriptions_new,
+                                                                                        preprocessed_text1,
+                                                                                        preprocessed_text2)
+
+            articles1 = get_top_k_articles(jaccard_similarity_text1, numDocs)
+            articles2 = get_top_k_articles(jaccard_similarity_text2, numDocs)
+
+            return {"articles1": articles1, "articles2": articles2}
+
+        elif metric == "fuzzy":
+            fuzzy_match_1, fuzzy_match_2 = get_fuzzy_match_ratio(descriptions, preprocessed_text1, preprocessed_text2)
+            articles1 = get_top_k_articles(fuzzy_match_1, numDocs)
+            articles2 = get_top_k_articles(fuzzy_match_2, numDocs)
+
+            return {"articles1": articles1, "articles2": articles2}
+
+        elif metric == "leven":
+            leven_dist_1, leven_dist_2 = get_levenstein_distance(descriptions, preprocessed_text1, preprocessed_text2)
+            print(leven_dist_1,leven_dist_2)
+            articles1 = get_top_k_articles(leven_dist_1, numDocs)
+            articles2 = get_top_k_articles(leven_dist_2, numDocs)
+
+            return {"articles1": articles1, "articles2": articles2}
+
+    except Exception as e:
+        print('An exception occurred:', e)
+        return JSONResponse(content={"error": "An exception occurred."})
+
+
+@app.post("/articles/")
+async def get_article_url(file1:UploadFile,url: str = Form(...)):
+    
+    text1 = await file1.read()
+    text1 = text1.decode('utf-8')
+    preprocessed_text1 = " ".join(preprocess_text(text1))
+    
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    extracted_text_list = []
+    for paragraph in soup.find_all("p"):
+        for tag in paragraph.find_all(['a', 'em']):
+            tag.decompose()
+
+        extracted_text_list.append(paragraph.text.strip())
+    
+    texts = " ".join(preprocess_text(" ".join(extracted_text_list)))
+    
+    #cos_sim
+    tfidf_vectorizer = TfidfVectorizer()  
+    tfidf_matrix1 = tfidf_vectorizer.fit_transform([preprocessed_text1])
+    tfidf_matrix2 = tfidf_vectorizer.transform([texts])
+    cos_sim = cosine_similarity(tfidf_matrix1, tfidf_matrix2)[0][0]
+    
+    #jaccard_sim
+    set1 = set(preprocessed_text1.split())
+    set2 = set(texts.split())
+    common_words = list(set1 & set2)
+    jaccard_sim = len(common_words) / len(set1 | set2) 
+
+    #lev_dist
+    levenshtein_distance = distance(text1,preprocessed_text1) / 100
+    
+    return {"cos_sim":cos_sim,"common_words":common_words,"jaccard_sim":jaccard_sim,"levenshtein_distance":levenshtein_distance}
+
+"""
+@app.post("/ner")
+async def get_ner_model(file1: UploadFile, file2: UploadFile):
+    try:
+        text1 = await file1.read()
+        text2 = await file2.read()
+
+        text1 = text1.decode('utf-8')
+        text2 = text2.decode('utf-8')
+      
+        
+
+        collection = get_collection()
+        
+        doc1 = nlp(text1)
+        doc2 = nlp(text2)
+        
+        entities1 = [(ent.text, ent.label_) for ent in doc1.ents]
+        entities2 = [(ent.text, ent.label_) for ent in doc2.ents]
+        
+        for i in entities2:
+            query = {"entity":i[0]}
+            results = collection.find(query)
+            for result in results:
+                print(result)
+                    
+    except Exception as e:
+        print('An exception occurred:', e)
+        return JSONResponse(content={"error": "An exception occurred."})
+"""

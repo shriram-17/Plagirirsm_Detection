@@ -1,0 +1,77 @@
+/* Form.css */
+
+/* Styles for the form container */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Styles for the file input divs */
+.file-input-div {
+  margin-bottom: 20px; /* Add some spacing between the file input divs */
+}
+
+/* Styles for the file input label */
+.file-input-label {
+  padding: 15px 20px;
+  background-color: #007bff; /* Blue background color */
+  color: #fff; /* White text color */
+  cursor: pointer;
+  border-radius: 8px; /* Rounded corners */
+  font-size: 1.2rem;
+  transition: background-color 0.3s ease; /* Smooth background color transition */
+}
+
+/* Darker blue background on hover */
+.file-input-label:hover {
+  background-color: #0056b3;
+}
+
+/* Hide the default file input */
+.file-input {
+  display: none;
+}
+
+/* Styles for the submit button */
+.submit-button {
+  background: linear-gradient(to right, #ff5722, #ff8f33); /* Gradient background */
+  color: #fff; /* White text color */
+  padding: 15px 40px;
+  border: none;
+  border-radius: 8px; /* Rounded corners */
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: background 0.3s ease; /* Smooth background color transition */
+}
+
+/* Gradient background on hover */
+.submit-button:hover {
+  background: linear-gradient(to right, #ff8f33, #ff5722);
+}
+
+.navbar-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.navbar-new h1 {
+  margin-bottom: 20px; /* Add some space below the h1 */
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+  width: 50%;
+}
+
+.file-input-div {
+  margin-bottom: 20px; /* Add some space below each file input div */
+}
+
