@@ -7,7 +7,9 @@ import { useState } from 'react';
 export default function Article() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { data, file1, file2 } = location.state;
+    
+    const {articles1 , articles2,file1,file2} = location.state;
+    /*
     const [url,setSelectedUrl] = useState<string>("");
     const handleFile1 = async () => {  
         const formdata = new FormData;
@@ -41,12 +43,11 @@ export default function Article() {
         } catch (error) {
             console.error(error)
         }
-    }
+    }*/
     return (
         <div className="articles-container">
             <div className="articles">
-                <h2 className="result-header" >Related Articles from {file1.name}</h2>
-                {data.articles1.map((article, index) => (
+                {articles1.map((article, index) => (
                     <div className="article" key={index}>
                         <h3 className="article-title">{article.title}</h3>
                         <p className="article-url">
@@ -60,7 +61,7 @@ export default function Article() {
                     </div>
                 ))}
                 <h2 className="result-header" >Related Articles from {file2.name}</h2>
-                {data.articles2.map((article, index) => (
+                {articles2.map((article, index) => (
                     <div className="article" key={index}>
                         <h3 className="article-title">{article.title}</h3>
                         <p className="article-url">

@@ -1,3 +1,4 @@
+import base64
 import strawberry
 from strawberry.file_uploads import Upload
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -7,9 +8,9 @@ from Levenshtein import distance
 import spacy
 from bs4 import BeautifulSoup
 import requests
-from src.utils import preprocess_text, get_descriptions, get_top_k_articles_cos_sim, get_top_k_articles, \
+from src.utils import dict_to_article, preprocess_text, get_descriptions, get_top_k_articles_cos_sim, get_top_k_articles, \
                       get_jaccard_similarity, get_fuzzy_match_ratio, get_levenstein_distance
-from .types import SimilarityMetrics, ArticleSimilarity, ArticlesResult
+from .types import Article, File, SimilarityMetrics, ArticleSimilarity, ArticlesResult
 
 nlp = spacy.load('en_core_web_md')
 
@@ -100,8 +101,17 @@ class Mutation:
 
             else:
                 raise ValueError("Unsupported metric")
-
-            return ArticlesResult(articles1=articles1, articles2=articles2)
+            
+            file1_data = base64.b64encode(file1).decode("utf-8")
+            file2_data = base64.b64encode(file2).decode("utf-8")
+            
+            articles1 = [dict_to_article(article) for article in articles1]
+            articles2 = [dict_to_article(article) for article in articles2]
+            
+            file1 = File(file_name = file1.name,file_data=text1)
+            file2 = File(file_name=file1.name,file_data=text2)
+            
+            return ArticlesResult(articles1=articles1, articles2=articles2,file1=file1,file2=file2)
 
         except Exception as e:
             raise Exception(f"An exception occurred: {str(e)}")

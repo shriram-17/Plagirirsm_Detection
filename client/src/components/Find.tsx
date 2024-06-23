@@ -1,14 +1,13 @@
 import React, { useState, useRef } from "react";
-import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 import "../styles/Find.css";
+import client from "../utils/client";
 
 export default function Form() {
-  const [file1, setFile1] = useState("");
-  const [file2, setFile2] = useState("");
-  const [numDocs, setNumDocs] = useState("");
-  const [metric, setMetric] = useState<String>("");
-  const [list, SetList] = useState([]);
+  const [file1, setFile1] = useState(null);
+  const [file2, setFile2] = useState(null);
+  const [numDocs, setNumDocs] = useState(0);
+  const [metric, setMetric] = useState("");
   const navigate = useNavigate();
   const file1InputRef = useRef(null);
   const file2InputRef = useRef(null);
@@ -22,7 +21,7 @@ export default function Form() {
   };
 
   const handleNumDocsChange = (event) => {
-    setNumDocs(event.target.value);
+    setNumDocs(parseInt(event.target.value, 10));
   };
 
   const handleMetricChange = (event) => {
@@ -33,31 +32,61 @@ export default function Form() {
     const formData = new FormData();
     formData.append("file1", file1);
     formData.append("file2", file2);
-    formData.append("numDocs", numDocs);
-    formData.append("metric", metric);
-    console.log(file1,file2)
-    try {
-      console.log(metric);
-      const response = await axios.post("http://127.0.0.1:8000/vsm", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
 
-      const responseData = {
-        data: response.data,
-        "file1": file1,
-        "file2": file2,
-      };
-  
-      SetList(response.data);
-      console.log(responseData);
-      navigate('/article', { state: responseData });
+    const mutation = `mutation($file1: Upload!, $file2: Upload!, $numDocs: Int!, $metric: String!) {
+        getVsmModel(file1: $file1, file2: $file2, numDocs: $numDocs, metric: $metric) {
+          articles1 {
+            title
+            tags
+            description
+            url
+          }
+          articles2 {
+            title
+            tags
+            description
+            url
+          }
+          file1
+          {
+            fileName
+            fileData
+          }
+          file2
+          {
+            fileName
+            fileData
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      file1,
+      file2,
+      numDocs,
+      metric
+    };
+
+    formData.append("operations", JSON.stringify({
+      query: mutation,
+      variables
+    }));
+
+    formData.append("map", JSON.stringify({
+      "0": ["variables.file1"],
+      "1": ["variables.file2"]
+    }));
+
+    try {
+      const result = await client.mutation(mutation, variables).toPromise();
+      console.log(result.data);
+      navigate('/article', { state: result.data.getVsmModel });
     } catch (error) {
       console.error(error);
     }
   };
-  
+
   return (
     <div className="navbar-new">
       <h1>Find the Related Articles</h1>
@@ -86,7 +115,7 @@ export default function Form() {
         </div>
         <div className="input-group">
           <label className="input-label" htmlFor="numDocs">
-            Choose no of top K documents
+            Choose number of top K documents
           </label>
           <input
             id="numDocs"
@@ -96,23 +125,23 @@ export default function Form() {
             onChange={handleNumDocsChange}
           />
         </div>
-         <div className="input-group">
+        <div className="input-group">
           <label className="input-label" htmlFor="metric">
             Choose a metric
           </label>
-           <select
-               id="metric"
-               className="metric-select"
-               value={metric}
-               onChange={handleMetricChange}
-           >
-             <option value="">Select a metric</option>
-             <option value="cosine">Cosine Similarity</option>
-             <option value="jaccard">Jaccard Similarity</option>
-             <option value="fuzzy">Fuzzy Match</option>
-             <option value="leven">Levenstein Distance</option>
-           </select>
-         </div>
+          <select
+            id="metric"
+            className="metric-select"
+            value={metric}
+            onChange={handleMetricChange}
+          >
+            <option value="">Select a metric</option>
+            <option value="cosine">Cosine Similarity</option>
+            <option value="jaccard">Jaccard Similarity</option>
+            <option value="fuzzy">Fuzzy Match</option>
+            <option value="leven">Levenshtein Distance</option>
+          </select>
+        </div>
         <button className="submit-button" onClick={handleSubmit}>
           Submit
         </button>

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { createClient } from 'urql';
 import { useNavigate } from 'react-router-dom';
 import "../styles/Form.css"
 import client from "../utils/client";
@@ -24,8 +23,7 @@ export default function Form() {
     formData.append("file1", file1);
     formData.append("file2", file2);
 
-    const mutation = `
-    mutation($file1: Upload!, $file2: Upload!) {
+    const mutation = `mutation($file1: Upload!, $file2: Upload!) {
       processFile(file1: $file1, file2: $file2) {
         cosineSimilarityTfidf
         fuzzyMatchRatio

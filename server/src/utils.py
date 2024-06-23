@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 from fuzzywuzzy import fuzz
 from Levenshtein import distance
 import spacy
-import warnings
 
 from sklearn.feature_extraction.text import TfidfVectorizer
+from .graphql.types import Article
 
 load_dotenv()
 
@@ -133,3 +133,11 @@ def get_levenstein_distance(descriptions, preprocessed_text1, preprocessed_text2
         levenstein_dist_text2[index] = leven_dist_2
 
     return levenstein_dist_text1,levenstein_dist_text2
+
+def dict_to_article(article_dict):
+    return Article(
+            title=article_dict['title'],
+            tags=article_dict['tags'],
+            description=article_dict['description'],
+            url=article_dict['url']
+            )
